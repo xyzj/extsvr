@@ -108,9 +108,9 @@ func main() {
 		stdlog = logger.NewNilLogger()
 	}
 	app = gocmd.DefaultProgram(&gocmd.Info{
-		Title: "programs managerment",
-		Ver:   version,
-		Descript: `
+		Name:    "programs managerment",
+		Version: version,
+		Description: `
 ssdctld.yaml.sample:
 app1:                    // program name
   priority: 999			 // start priority, from small to large

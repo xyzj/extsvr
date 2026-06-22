@@ -2,8 +2,10 @@ module extsvr
 
 go 1.25.0
 
+replace github.com/xyzj/go-cmd => /home/xy/.xywork/golang/go-cmd
+
 require (
-	github.com/xyzj/go-cmd v0.0.0-20260512062241-03f7ca73bae4
+	github.com/xyzj/go-cmd v0.0.0-20260622062644-aad0541eee5e
 	github.com/xyzj/toolbox v0.0.0-20260108074518-2adcd054d04b
 	gopkg.in/yaml.v3 v3.0.1
 )

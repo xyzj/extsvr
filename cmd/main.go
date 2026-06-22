@@ -27,9 +27,9 @@ var (
 // params：要执行的参数，多个参数用`，`分割，（仅新增时有效）
 func main() {
 	gocmd.NewProgram(&gocmd.Info{
-		Ver:      version,
-		Title:    "start stop daemon",
-		Descript: "control background process",
+		Version:     version,
+		Name:        "start stop daemon",
+		Description: "control background process",
 	}).
 		AddCommand(&gocmd.Command{
 			Name:     "start",
