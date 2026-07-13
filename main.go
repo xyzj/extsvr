@@ -389,7 +389,7 @@ func recv(cli *unixClient) {
 				}
 				return true
 			})
-		case model.NameAll:
+		case "", model.NameAll:
 			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
 				if value.Enable {
 					cli.Send(key, statusSvr(key, value))
@@ -426,9 +426,9 @@ func recv(cli *unixClient) {
 				}
 				return true
 			})
-		case "":
-			cli.Send("", allconf.Print())
-		case model.NameAll:
+		// case "":
+		// 	cli.Send("", allconf.Print())
+		case "", model.NameAll:
 			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
 				cli.Send(key, listSvr(key, value))
 				return true
@@ -442,7 +442,10 @@ func recv(cli *unixClient) {
 		}
 	case model.JobUpate: // 列出所有，刷新
 		allconf.FromFiles()
-		cli.Send("", allconf.Print())
+		allconf.ForEach(func(key string, value *model.ServiceParams) bool {
+			cli.Send(key, listSvr(key, value))
+			return true
+		})
 	case model.JobSetLevel: // 设置优先级
 		if !ok {
 			cli.Send(todo.Name, unknowProgram+"`"+todo.Name+"`")
