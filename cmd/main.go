@@ -284,7 +284,7 @@ func checkParams(params []string) bool {
 			println("Usage:\n\t " + os.Args[0] + " " + cmd + " app1 app2 ...")
 			return false
 		}
-	case model.NameStatus, model.NameRemove:
+	case model.NameRemove:
 		if len(params) < 2 {
 			println("Usage:\n\t " + os.Args[0] + " " + cmd + " app")
 			return false
@@ -352,9 +352,17 @@ func doJob(params []string) {
 			time.Sleep(time.Millisecond * 200)
 		}
 	case model.NameStatus:
-		todo := &model.ToDo{
-			Name: params[1],
-			Do:   model.JobStatus,
+		var todo *model.ToDo
+		if len(params) > 1 {
+			todo = &model.ToDo{
+				Do:   model.JobStatus,
+				Name: params[1],
+			}
+		} else {
+			todo = &model.ToDo{
+				Do:   model.JobStatus,
+				Name: "all",
+			}
 		}
 		cliConn.WriteToUnix(todo.ToJSON(), model.SvrAddr)
 		time.Sleep(time.Millisecond * 200)
@@ -383,7 +391,8 @@ func doJob(params []string) {
 			}
 		} else {
 			todo = &model.ToDo{
-				Do: model.JobList,
+				Do:   model.JobList,
+				Name: "all",
 			}
 		}
 		cliConn.WriteToUnix(todo.ToJSON(), model.SvrAddr)

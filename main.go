@@ -381,7 +381,7 @@ func recv(cli *unixClient) {
 				}
 				return true
 			})
-		case model.NameEnable:
+		case model.NameEnable, model.NameAll:
 			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
 				if !value.Enable {
 					return true
@@ -391,13 +391,6 @@ func recv(cli *unixClient) {
 					cli.Send(key, formatOutput(key, "PS", s)) //"[PS\t"+key+"]:\n"+s)
 				} else {
 					cli.Send(key, formatOutput(key, "PS", "not running"))
-				}
-				return true
-			})
-		case "", model.NameAll:
-			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
-				if value.Enable {
-					cli.Send(key, statusSvr(key, value))
 				}
 				return true
 			})
@@ -433,7 +426,7 @@ func recv(cli *unixClient) {
 			})
 		// case "":
 		// 	cli.Send("", allconf.Print())
-		case "", model.NameAll:
+		case model.NameAll:
 			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
 				cli.Send(key, listSvr(key, value))
 				return true
