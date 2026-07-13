@@ -174,6 +174,11 @@ in this case, $pubip will be replace to the result of 'curl -s 4.ipw.cn'`,
 				return 0
 			},
 		})
+	app.AfterStop(func() {
+		if !strings.HasPrefix(model.SvrSock, "@") {
+			os.Remove(model.SvrSock)
+		}
+	})
 	app.ExecuteDefault("start")
 	// 初始化
 	if !gocmd.IsExist(cnfdir) {
@@ -657,12 +662,12 @@ func formatOutput(name, do, body string) string {
 		if do == "" {
 			return "\n" + body
 		}
-		s = "< " + do + " >"
+		s = model.Colorize("< "+do+" >", model.StyleItalic, model.FgGreen)
 	} else {
 		if do == "" {
-			s = "[ " + name + " ]"
+			s = model.Colorize("[ "+name+" ]", model.StyleBold, model.FgCyan)
 		} else {
-			s = "[ " + name + ":  " + do + " ]"
+			s = model.Colorize("[ "+name+":  "+do+" ]", model.StyleBold, model.FgCyan)
 		}
 	}
 	if body == "" {

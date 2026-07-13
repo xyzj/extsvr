@@ -4,19 +4,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-)
-
-const (
-	SvrSock = "@ssdctld.sock"
-	CliSock = "@ssdctl_%d.sock"
+	"os"
 )
 
 var (
+	SvrSock = "@ssdctld.sock"
+	CliSock = "@ssdctl_%d.sock"
 	SvrAddr = &net.UnixAddr{Name: SvrSock, Net: "unixgram"}
 	CliAddr = func(pid int) *net.UnixAddr {
 		return &net.UnixAddr{Name: fmt.Sprintf(CliSock, pid), Net: "unixgram"}
 	}
 )
+
+func init() {
+	if s := os.Getenv("ssdctld_sock"); s != "" {
+		SvrSock = s
+		SvrAddr = &net.UnixAddr{Name: SvrSock, Net: "unixgram"}
+	}
+}
 
 type ToDo struct {
 	Name   string   `json:"name"`
