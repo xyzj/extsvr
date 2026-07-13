@@ -655,12 +655,12 @@ func formatOutput(name, do, body string) string {
 		if do == "" {
 			return "\n" + body
 		}
-		s = model.Colorize("< "+do+" >", model.StyleItalic, model.FgGreen)
+		s = gocmd.Colorize("< "+do+" >", gocmd.StyleItalic, gocmd.FgGreen)
 	} else {
 		if do == "" {
-			s = model.Colorize("[ "+name+" ]", model.StyleBold, model.FgCyan)
+			s = gocmd.Colorize("[ "+name+" ]", gocmd.StyleBold, gocmd.FgCyan)
 		} else {
-			s = model.Colorize("[ "+name+":  "+do+" ]", model.StyleBold, model.FgCyan)
+			s = gocmd.Colorize("[ "+name+":  "+do+" ]", gocmd.StyleBold, gocmd.FgCyan)
 		}
 	}
 	if body == "" {
