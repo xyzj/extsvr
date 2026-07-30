@@ -90,7 +90,8 @@ func (uc *unixClient) Send(name, s string) {
 		case '[', '<', '>', '+', '-', '*':
 			b.WriteString(v)
 		default:
-			b.WriteString("  " + v)
+			b.WriteString("  ")
+			b.WriteString(v)
 		}
 		b.WriteByte(10)
 	}
@@ -349,9 +350,10 @@ func recv(cli *unixClient) {
 			return
 		}
 		if err := allconf.AddItem(todo.Name, &model.ServiceParams{
-			Exec:   todo.Exec,
-			Params: todo.Params,
-			Enable: true,
+			Exec:     todo.Exec,
+			Params:   todo.Params,
+			Enable:   true,
+			Priority: 99,
 		}); err != nil {
 			cli.Send(todo.Name, "+++ "+todo.Name+" add failed: "+err.Error())
 		} else {

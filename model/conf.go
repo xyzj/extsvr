@@ -48,9 +48,9 @@ func (c *Config) ensureDefault(svr *ServiceParams) *ServiceParams {
 		}
 	}
 	if svr.Priority == 0 {
-		svr.Priority = 200
+		svr.Priority = 99
 	}
-	svr.Priority = min(max(svr.Priority, 1), 255)
+	svr.Priority = min(max(svr.Priority, 1), 99)
 	svr.StartSec = max(svr.StartSec, 2)
 	return svr
 }
@@ -168,7 +168,7 @@ func (c *Config) SetLevel(name string, l uint32) error {
 	if !ok {
 		return errors.New("service " + name + " not found")
 	}
-	s.Priority = max(min(l, 99), 1)
+	s.Priority = uint8(max(min(l, 99), 1))
 	b, err := yaml.Marshal(s)
 	if err != nil {
 		return err
