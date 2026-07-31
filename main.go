@@ -67,6 +67,8 @@ var (
 
 	app     *gocmd.Program
 	version = "0.0.0"
+
+	doEnd = json.Bytes("END")
 	// ps -C name
 	// ps -p pid
 	// psout   = []string{"-o", "pid=", "-o", "user=", "-o", `%cpu=`, "-o", `%mem=`, "-o", "stat=", "-o", "start=", "-o", "time=", "-o", "cmd="}
@@ -114,10 +116,10 @@ func main() {
 		Description: `
 ssdctld.yaml.sample:
 app1:                    // program name
-  priority: 999			 // start priority, from small to large
+  priority: 99			 // start priority, from small to large
   startsec:				 // # of secs prog must stay up to be running
-  exec: /op/aa           // program exec path
-  dir: /op               // program working dir, default is program's base dir
+  exec: /path/aa         // program exec path
+  dir: /path             // program working dir, default is program's base dir
   params:                // program args
     - -q=12
     - -c=$pubip          // '$public' will be replaced by the replace setting before run
@@ -264,13 +266,13 @@ func recv(cli *unixClient) {
 	err := todo.FromJSON(cli.buf)
 	if err != nil {
 		cli.Send("error", err.Error())
-		uln.WriteToUnix(json.Bytes("END"), cli.conn)
+		uln.WriteToUnix(doEnd, cli.conn)
 		return
 	}
 	exe, ok := allconf.GetItem(todo.Name)
 	switch todo.Do {
 	case model.JobEnd: // 关闭
-		uln.WriteToUnix(json.Bytes("END"), cli.conn)
+		uln.WriteToUnix(doEnd, cli.conn)
 		return
 	case model.JobStart: // 启动
 		if !ok && todo.Name != model.NameAll {
@@ -280,10 +282,10 @@ func recv(cli *unixClient) {
 		if todo.Name == model.NameAll {
 			stdlog.Info("start all")
 			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
-				if !value.Enable {
+				if !value.Enable || value.Exempt {
 					return true
 				}
-				cli.Send(todo.Name, formatOutput(todo.Name, "STARTING...", "||> "+value.Exec+" "+strings.Join(value.Params, " "))) //"[STARTING...] "+todo.Name)
+				cli.Send(todo.Name, formatOutput(key, "STARTING...", "||> "+value.Exec+" "+strings.Join(value.Params, " "))) //"[STARTING...] "+todo.Name)
 				s, _ := startSvrFork(key, value)
 				cli.Send(key, s)
 				return true
@@ -302,13 +304,7 @@ func recv(cli *unixClient) {
 		if todo.Name == model.NameAll {
 			stdlog.Info("stop all")
 			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
-				if !value.Enable {
-					return true
-				}
-				if strings.Contains(value.Exec, "ttyd") ||
-					strings.Contains(value.Exec, "caddy") ||
-					strings.Contains(value.Exec, "dragonfly") ||
-					strings.Contains(value.Exec, "stmq") {
+				if !value.Enable || value.Exempt {
 					return true
 				}
 				cli.Send(key, stopSvrFork(key, value))
@@ -345,7 +341,9 @@ func recv(cli *unixClient) {
 	case model.JobCreate: // 新增服务
 		switch todo.Name {
 		case model.NameAll, model.NameDisable, model.NameEnable, model.NameStatus, model.NameStart, model.NameStop,
-			model.NameStopped, model.NameRestart, model.NameRemove, model.NameCreate, model.NameList, model.NameRunning:
+			model.NameStopped, model.NameRestart, model.NameRemove, model.NameCreate, model.NameList, model.NameRunning,
+			model.NameDisabled, model.NameEnabled, model.NameConfig, model.NamePriority, model.NameExempt, model.NameStartSec,
+			model.NameUpdate:
 			cli.Send("all", "can not use `"+todo.Name+"` as application's name")
 			return
 		}
@@ -370,7 +368,7 @@ func recv(cli *unixClient) {
 				}
 				return true
 			})
-		case model.NameDisable:
+		case model.NameDisabled:
 			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
 				if value.Enable {
 					return true
@@ -383,7 +381,7 @@ func recv(cli *unixClient) {
 				}
 				return true
 			})
-		case model.NameEnable, model.NameAll:
+		case model.NameEnabled, model.NameAll:
 			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
 				if !value.Enable {
 					return true
@@ -405,14 +403,14 @@ func recv(cli *unixClient) {
 		}
 	case model.JobList:
 		switch todo.Name {
-		case model.NameEnable:
+		case model.NameEnabled:
 			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
 				if value.Enable {
 					cli.Send(key, listSvr(key, value))
 				}
 				return true
 			})
-		case model.NameDisable:
+		case model.NameDisabled:
 			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
 				if !value.Enable {
 					cli.Send(key, listSvr(key, value))
@@ -428,7 +426,7 @@ func recv(cli *unixClient) {
 			})
 		// case "":
 		// 	cli.Send("", allconf.Print())
-		case model.NameAll:
+		case "", model.NameAll:
 			allconf.ForEach(func(key string, value *model.ServiceParams) bool {
 				cli.Send(key, listSvr(key, value))
 				return true
@@ -440,19 +438,40 @@ func recv(cli *unixClient) {
 			}
 			cli.Send(todo.Name, listSvr(todo.Name, exe))
 		}
-	case model.JobUpate: // 列出所有，刷新
+	case model.JobUpdate: // 列出所有，刷新
 		allconf.FromFiles()
 		allconf.ForEach(func(key string, value *model.ServiceParams) bool {
 			cli.Send(key, listSvr(key, value))
 			return true
 		})
-	case model.JobSetLevel: // 设置优先级
+	case model.JobConfig: // 设置配置项
 		if !ok {
 			cli.Send(todo.Name, unknowProgram+"`"+todo.Name+"`")
 			return
 		}
-		allconf.SetLevel(todo.Name, uint32(toolbox.String2Int32(todo.Exec, 10)))
-		cli.Send(todo.Name, ">>> set "+todo.Name+" start level to "+strconv.FormatUint(uint64(toolbox.String2Int32(todo.Exec, 10)), 10))
+		if len(todo.Params) == 0 {
+			cli.Send(todo.Name, "Usage:\n\t "+os.Args[0]+" config appname key value")
+			return
+		}
+		switch todo.Exec {
+		case model.NameEnable, model.NameExempt:
+			e, _ := strconv.ParseBool(todo.Params[0])
+			allconf.UpdateItem(todo.Name, todo.Exec, e)
+			cli.Send(todo.Name, ">>> set "+todo.Name+" config."+todo.Exec+" to "+strconv.FormatBool(e))
+		case model.NamePriority, model.NameStartSec:
+			l64, _ := strconv.ParseInt(todo.Params[0], 10, 0)
+			var l uint8
+			switch todo.Exec {
+			case model.NamePriority:
+				l = uint8(max(min(l64, 99), 1))
+			case model.NameStartSec:
+				l = uint8(min(max(l64, 1), 30))
+			}
+			allconf.UpdateItem(todo.Name, todo.Exec, l)
+			cli.Send(todo.Name, ">>> set "+todo.Name+" config."+todo.Exec+" to "+strconv.Itoa(int(l)))
+		default:
+			cli.Send(todo.Name, "unknown config key: "+todo.Exec)
+		}
 	}
 }
 

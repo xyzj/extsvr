@@ -136,8 +136,9 @@ func (c *Config) DelItem(name string) error {
 		if strings.Contains(err.Error(), "no such file") {
 			return nil
 		}
+		return err
 	}
-	return err
+	return nil
 }
 
 func (c *Config) GetItem(name string) (*ServiceParams, bool) {
@@ -148,6 +149,39 @@ func (c *Config) GetItem(name string) (*ServiceParams, bool) {
 		return nil, false
 	}
 	return cloneServiceParams(s), true
+}
+func (c *Config) UpdateItem(name, config string, value any) error {
+	c.locker.Lock()
+	defer c.locker.Unlock()
+	s, ok := c.data[name]
+	if !ok {
+		return errors.New("service " + name + " not found")
+	}
+	switch config {
+	case NameEnable:
+		if v, ok := value.(bool); ok {
+			s.Enable = v
+		}
+	case NameExempt:
+		if v, ok := value.(bool); ok {
+			s.Exempt = v
+		}
+	case NamePriority:
+		if v, ok := value.(uint8); ok {
+			s.Priority = uint8(max(min(v, 99), 1))
+		}
+	case NameStartSec:
+		if v, ok := value.(uint8); ok {
+			s.StartSec = min(max(v, 1), 30)
+		}
+	default:
+		return errors.New("unknown config key: " + config)
+	}
+	b, err := yaml.Marshal(s)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(c.cnfdir, name+".yaml"), b, 0o664)
 }
 
 func (c *Config) SetRuntime(name string, pid int, manualStop bool) error {
@@ -161,37 +195,15 @@ func (c *Config) SetRuntime(name string, pid int, manualStop bool) error {
 	s.ManualStop = manualStop
 	return nil
 }
-func (c *Config) SetLevel(name string, l uint32) error {
-	c.locker.Lock()
-	defer c.locker.Unlock()
-	s, ok := c.data[name]
-	if !ok {
-		return errors.New("service " + name + " not found")
-	}
-	s.Priority = uint8(max(min(l, 99), 1))
-	b, err := yaml.Marshal(s)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(c.cnfdir, name+".yaml"), b, 0o664)
-}
 
+func (c *Config) SetExempt(name string, exempt bool) error {
+	return c.UpdateItem(name, NameExempt, exempt)
+}
+func (c *Config) SetPriority(name string, l uint8) error {
+	return c.UpdateItem(name, NamePriority, l)
+}
 func (c *Config) SetEnable(name string, enable bool) error {
-	c.locker.Lock()
-	defer c.locker.Unlock()
-	s, ok := c.data[name]
-	if !ok {
-		return errors.New("service " + name + " not found")
-	}
-	if s.Enable == enable {
-		return nil
-	}
-	s.Enable = enable
-	b, err := yaml.Marshal(s)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(c.cnfdir, name+".yaml"), b, 0o664)
+	return c.UpdateItem(name, NameEnable, enable)
 }
 
 func (c *Config) ForEach(f func(key string, value *ServiceParams) bool) {

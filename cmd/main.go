@@ -132,8 +132,8 @@ Available commands:
 			},
 		}).
 		AddCommand(&gocmd.Command{
-			Name:     "setlevel",
-			Descript: "set a program's start level, 1-255",
+			Name:     "config",
+			Descript: "set a program's config key value",
 			RunWithExitCode: func(pi *gocmd.ProcInfo) int {
 				send2svr(os.Args[1:]...)
 				return 0
@@ -222,7 +222,8 @@ Commands:
   remove app                           remove one program config
   create app execpath [param1 ...]     add one program config
   update                               reload/update config in daemon
-  setlevel app level(1-255)            set start level for one app`)
+  config appname key value             set config for one program
+  `)
 	}
 	err := conn2svr()
 	if err != nil {
@@ -289,9 +290,14 @@ func checkParams(params []string) bool {
 			println("Usage:\n\t " + os.Args[0] + " " + cmd + " app")
 			return false
 		}
-	case model.NameCreate, model.NameStartLevel:
+	case model.NameCreate:
 		if len(params) < 3 {
 			println("Usage:\n\t " + os.Args[0] + " create appname execpath param1 param2 ...")
+			return false
+		}
+	case model.NameConfig:
+		if len(params) < 4 {
+			println("Usage:\n\t " + os.Args[0] + " config appname key value")
 			return false
 		}
 	}
@@ -399,7 +405,7 @@ func doJob(params []string) {
 		time.Sleep(time.Millisecond * 200)
 	case model.NameUpdate:
 		todo := &model.ToDo{
-			Do: model.JobUpate,
+			Do: model.JobUpdate,
 		}
 		cliConn.WriteToUnix(todo.ToJSON(), model.SvrAddr)
 		time.Sleep(time.Millisecond * 200)
@@ -409,11 +415,16 @@ func doJob(params []string) {
 		}
 		cliConn.WriteToUnix(todo.ToJSON(), model.SvrAddr)
 		time.Sleep(time.Millisecond * 200)
-	case model.NameStartLevel:
+	case model.NameConfig:
+		if len(params) < 4 {
+			println("Usage:\n\t " + os.Args[0] + " config appname key value")
+			return
+		}
 		todo := &model.ToDo{
-			Name: params[1],
-			Do:   model.JobSetLevel,
-			Exec: params[2],
+			Name:   params[1],
+			Do:     model.JobConfig,
+			Exec:   params[2],
+			Params: params[3:],
 		}
 		cliConn.WriteToUnix(todo.ToJSON(), model.SvrAddr)
 		time.Sleep(time.Millisecond * 200)

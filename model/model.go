@@ -57,9 +57,10 @@ type ServiceParams struct {
 	Replace    []string `yaml:"replace,omitempty"`
 	Env        []string `yaml:"env,omitempty"`
 	Pid        int      `yaml:"-"`
-	StartSec   uint32   `yaml:"startsec"`
+	StartSec   uint8    `yaml:"startsec"`
 	Priority   uint8    `yaml:"priority"`
 	Enable     bool     `yaml:"enable"`
+	Exempt     bool     `yaml:"exempt"`
 	ManualStop bool     `yaml:"-"`
 }
 
@@ -77,24 +78,29 @@ const (
 	JobCreate
 	JobRemove
 	JobList
-	JobUpate
-	JobSetLevel
+	JobUpdate
+	JobConfig
 )
 
 const (
-	NameAll        = "all"
-	NameDisable    = "disable"
-	NameEnable     = "enable"
-	NameStatus     = "status"
-	NameStart      = "start"
-	NameStop       = "stop"
-	NameStopped    = "stopped"
-	NameRestart    = "restart"
-	NameRemove     = "remove"
-	NameCreate     = "create"
-	NameList       = "list"
-	NameRunning    = "running"
-	NameShutdown   = "shutdown"
-	NameStartLevel = "startlevel"
-	NameUpdate     = "update"
+	NameAll      = "all"
+	NameDisable  = "disable"
+	NameEnable   = "enable"
+	NameDisabled = "disabled"
+	NameEnabled  = "enabled"
+	NameStatus   = "status"
+	NameStart    = "start"
+	NameStop     = "stop"
+	NameStopped  = "stopped"
+	NameRestart  = "restart"
+	NameRemove   = "remove"
+	NameCreate   = "create"
+	NameList     = "list"
+	NameRunning  = "running"
+	NameShutdown = "shutdown"
+	NamePriority = "priority"
+	NameUpdate   = "update"
+	NameExempt   = "exempt"
+	NameStartSec = "startsec"
+	NameConfig   = "config"
 )
